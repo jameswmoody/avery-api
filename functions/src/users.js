@@ -1,8 +1,16 @@
 'use strict';
 
 const firebase = require('firebase');
-const { db } = require('../util/admin');
-const { isEmpty, isEmail } = require('../util/helpers');
+const firebaseConfig = require('../config/firebaseConfig');
+const {
+    db
+} = require('../util/admin');
+const {
+    isEmpty,
+    isEmail
+} = require('../util/helpers');
+
+firebase.initializeApp(firebaseConfig);
 
 const newUser = (req, res) => {
     const {
@@ -75,7 +83,9 @@ const newUser = (req, res) => {
                 createdAt: new Date().toISOString(),
                 deactivatedAt: null
             };
-            return db.doc(`/users/${userID}`).set(newUser);
+            return db
+                .doc(`/users/${userID}`)
+                .set(newUser);
         })
         .then(() => {
             return res.status(201).json({
@@ -93,7 +103,7 @@ const newUser = (req, res) => {
 
 const getUser = (req, res) => {
     const userID = req.params.userID;
-    db.doc(`/users/${req.params.userID}`)
+    db.doc(`/users/${userID}`)
         .get()
         .then((doc) => {
             if (doc.exists) {
@@ -122,7 +132,9 @@ const getUser = (req, res) => {
             } else {
                 return res
                     .status(404)
-                    .json({ error: `User ${userId} not found` });
+                    .json({
+                        error: `User ${userId} not found`
+                    });
             }
         })
         .then((userData) => {
@@ -172,8 +184,113 @@ const getAllUsers = (req, res) => {
         });
 };
 
+const loginUser = (req, res) => {
+    const {
+        email,
+        password
+    } = req.body;
+
+    const errors = {};
+
+    if (isEmpty(email) || isEmpty(password)) {
+        errors.credentials = 'Invalid credentials provided';
+    }
+
+    if (Object.keys(errors).length > 0) {
+        return res.status(400).json({
+            message: 'User could not be authenticated',
+            errors
+        });
+    }
+
+    return firebase
+        .auth()
+        .signInWithEmailAndPassword(email, password)
+        .then(UserCredential => {
+            return UserCredential.user.getIdToken();
+        })
+        .then(token => {
+            return res.json({
+                token
+            })
+        })
+        .catch(err => {
+            console.error(err);
+            if (err.code === 'auth/wrong-password') {
+                return res.status(403).json({
+                    errors: {
+                        credentials: 'Invalid credentials provided'
+                    }
+                });
+            }
+            return res.status(500).json({
+                message: 'User could not be authenticated',
+                errors: err
+            });
+        });
+};
+
+const removeDocumentFromUser = (req, res) => {
+    const userID = req.params.userID;
+    const documentID = req.params.documentID;
+
+    return db
+        .doc(`/documents/${documentID}`)
+        .get()
+        .then((doc) => {
+            if (doc.exists) {
+                const assignedTo = doc
+                    .data().assignedTo
+                    .filter(d => d !== userID);
+
+                return doc
+                    .ref
+                    .update({
+                        assignedTo
+                    });
+            } else {
+                return res
+                    .status(404)
+                    .json({
+                        error: `Document ${documentID} not found`
+                    });
+            }
+        })
+        .then(() => {
+            return db
+                .doc(`/users/${userID}`)
+                .get();
+        })
+        .then((doc) => {
+            if (doc.exists) {
+                const documents = doc.data().documents.filter(d => d !== documentID);
+                return doc
+                    .ref
+                    .update({
+                        documents
+                    });
+            } else {
+                return res
+                    .status(404)
+                    .json({
+                        error: `User ${userID} not found`
+                    });
+            }
+        })
+        .then(() => {
+            return res.json({
+                message: `Document ${documentID} successfully removed from user ${userID}`
+            });
+        })
+        .catch((err) => {
+            return err;
+        });
+}
+
 module.exports = {
     newUser,
     getUser,
-    getAllUsers
+    getAllUsers,
+    loginUser,
+    removeDocumentFromUser
 };

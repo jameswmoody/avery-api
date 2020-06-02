@@ -5,7 +5,7 @@ const {
     db
 } = require('./admin');
 
-const firebaseAuth = (req, res, next) => {
+module.exports = (req, res, next) => {
     let idToken;
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
         idToken = req.headers.authorization = req.headers.authorization.split('Bearer ')[1];
@@ -18,7 +18,7 @@ const firebaseAuth = (req, res, next) => {
         .then(decodedToken => {
             req.user = decodedToken;
             return db.collection('users')
-                .where('userId', '==', req.user.id)
+                .where('userId', '==', req.user.uid)
                 .limit(1)
                 .get();
         })
@@ -31,8 +31,4 @@ const firebaseAuth = (req, res, next) => {
                 errors: err
             });
         })
-}
-
-module.exports = {
-    firebaseAuth
 };

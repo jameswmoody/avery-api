@@ -85,14 +85,40 @@ const getAllPosts = (req, res) => {
         });
 
 };
-// const getPost = () => {
 
-// };
+const getPost = (req, res) => {
+    const postID = req.params.postID;
+    db.doc(`/posts/${postID}`)
+        .get()
+        .then((doc) => {
+            if (doc.exists) {
+                return {
+                    postID: doc.data().postID,
+                    author: doc.data().author,
+                    body: doc.data().body,
+                    createdAt: doc.data().createdAt,
+                    deletedAt: doc.data().deletedAt
+                };
+            } else {
+                return res
+                    .status(404)
+                    .json({
+                        error: `Post ${postId} not found`
+                    });
+            }
+        })
+        .then((postData) => {
+            return res.json(postData);
+        })
+        .catch((err) => {
+            return err;
+        });
+};
 
 
 
 module.exports = {
     newPost,
-    // getPost,
+    getPost,
     getAllPosts
 }
