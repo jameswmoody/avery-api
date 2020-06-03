@@ -5,10 +5,7 @@ const uuid = require('uuid');
 const Busboy = require('busboy');
 
 const firebaseConfig = require('../config/firebaseConfig');
-const {
-	admin,
-	db
-} = require('../util/admin');
+const { admin, db } = require('../util/admin');
 
 const SUPPORTED_FILE_TYPES = [
 	'image/jpeg',
@@ -204,9 +201,27 @@ const deleteDocument = (req, res) => {
 	const {
 		documentID
 	} = req.params;
-	return db
-		.doc(`/documents/${documentID}`)
+
+	db
+		.doc(`/users/${req.user.uid}`)
 		.get()
+		.then((doc) => {
+			if (doc.exists) {
+				return doc.data().isAdmin;
+			}
+			return false;
+		})
+		.then((isAdminUser) => {
+			if (!isAdminUser) {
+				return res.status(401)
+					.json({
+						errors: 'Unauthorized'
+					});
+			}
+			return db
+				.doc(`/documents/${documentID}`)
+				.get();
+		})
 		.then((doc) => {
 			if (doc.exists) {
 				return doc.ref.update({

@@ -1,3 +1,7 @@
+const {
+	db
+} = require('./admin');
+
 const isEmpty = (string) => !string || string.trim() === '';
 
 const isEmail = (email) => {
@@ -19,8 +23,22 @@ const removeEmptyParams = (body) => {
 	return paramsWithValues;
 };
 
+const isAdmin = (user) => {
+	db
+		.doc(`/users/${user.uid}`)
+		.get()
+		.then((doc) => {
+			if (doc.exists) {
+				return doc.data().isAdmin;
+			}
+			return false;
+		})
+		.catch((err) => err);
+};
+
 module.exports = {
 	isEmpty,
 	isEmail,
-	removeEmptyParams
+	removeEmptyParams,
+	isAdmin
 };

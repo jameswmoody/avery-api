@@ -279,14 +279,22 @@ const updateUser = (req, res) => {
 			}));
 };
 
-const deactivatedUser = (req, res) => {
+const deactivateUser = async (req, res) => {
 	const {
 		userID
 	} = req.params;
+
 	return db
 		.doc(`/users/${userID}`)
 		.get()
 		.then((doc) => {
+			const isAdminUser = doc.data().isAdmin;
+			if (!isAdminUser) {
+				return res.status(401)
+					.json({
+						errors: 'Unauthorized'
+					});
+			}
 			if (doc.exists) {
 				return doc.ref.update({
 					isDeactivated: true,
@@ -366,7 +374,7 @@ const addDocumentToUser = (req, res) => {
 		}));
 };
 
-const removeDocumentFromUser = (req, res) => {
+const removeDocumentFromUser = async (req, res) => {
 	const {
 		userID
 	} = req.params;
@@ -374,9 +382,26 @@ const removeDocumentFromUser = (req, res) => {
 		documentID
 	} = req.params;
 
-	return db
-		.doc(`/documents/${documentID}`)
+	db
+		.doc(`/users/${req.user.uid}`)
 		.get()
+		.then((doc) => {
+			if (doc.exists) {
+				return doc.data().isAdmin;
+			}
+			return false;
+		})
+		.then((isAdminUser) => {
+			if (!isAdminUser) {
+				return res.status(401)
+					.json({
+						errors: 'Unauthorized'
+					});
+			}
+			return db
+				.doc(`/documents/${documentID}`)
+				.get();
+		})
 		.then((doc) => {
 			if (doc.exists) {
 				const assignedTo = doc
@@ -391,6 +416,7 @@ const removeDocumentFromUser = (req, res) => {
 				error: `Document ${documentID} not found`
 			});
 		})
+
 		.then(() => db.doc(`/users/${userID}`).get())
 		.then((doc) => {
 			if (doc.exists) {
@@ -419,7 +445,7 @@ module.exports = {
 	getUser,
 	getAllUsers,
 	loginUser,
-	deactivatedUser,
+	deactivateUser,
 	updateUser,
 	addDocumentToUser,
 	removeDocumentFromUser
