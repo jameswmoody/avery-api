@@ -1,4 +1,4 @@
-'use strict';
+require('dotenv').config();
 
 const functions = require('firebase-functions');
 const app = require('express')();
@@ -6,22 +6,25 @@ const login = require('express')();
 const firebaseAuth = require('./util/firebaseAuth');
 
 const {
-    newPost,
-    getPost,
-    getAllPosts
+	newPost,
+	getPost,
+	getAllPosts
 } = require('./src/posts');
 const {
-    newUser,
-    getUser,
-    getAllUsers,
-    removeDocumentFromUser,
-    loginUser
+	newUser,
+	getUser,
+	getAllUsers,
+	loginUser,
+	deactivatedUser,
+	updateUser,
+	addDocumentToUser,
+	removeDocumentFromUser
 } = require('./src/users');
 const {
-    uploadDocument,
-    getDocument,
-    getAllDocuments,
-    deleteDocument
+	uploadDocument,
+	getDocument,
+	getAllDocuments,
+	deleteDocument
 } = require('./src/documents');
 
 // Posts
@@ -33,8 +36,10 @@ app.post('/api/v1/posts', firebaseAuth, newPost);
 app.get('/api/v1/users', firebaseAuth, getAllUsers);
 app.get('/api/v1/users/:userID', firebaseAuth, getUser);
 app.post('/api/v1/users', firebaseAuth, newUser);
+app.post('/api/v1/users/:userID/documents', firebaseAuth, addDocumentToUser);
+app.put('/api/v1/users/:userID', firebaseAuth, updateUser);
+app.delete('/api/v1/users/:userID', firebaseAuth, deactivatedUser);
 app.delete('/api/v1/users/:userID/documents/:documentID', firebaseAuth, removeDocumentFromUser);
-
 
 // Documents
 app.get('/api/v1/documents', firebaseAuth, getAllDocuments);
